@@ -7,11 +7,12 @@ import (
 	"journey/internal/pgstore"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
-	
 )
 
 type store interface {
@@ -20,13 +21,14 @@ type store interface {
 }
 
 type API struct {
-	store  store
-	logger *zap.Logger
+	store     store
+	logger    *zap.Logger
+	validator *validator.Validate
 }
 
-
 func NewAPI(pool *pgxpool.Pool, logger *zap.Logger) API {
-	return API{pgstore.New(pool),logger}
+	validator := validator.New(validator.WithRequiredStructEnabled())
+	return API{pgstore.New(pool), logger, validator}
 }
 
 // Confirms a participant on a trip.
@@ -57,7 +59,18 @@ func (api *API) PatchParticipantsParticipantIDConfirm(w http.ResponseWriter, r *
 // Create a new trip
 // (POST /trips)
 func (api *API) PostTrips(w http.ResponseWriter, r *http.Request) *spec.Response {
-	panic("not implemented") // TODO: Implement
+	var body spec.CreateTripRequest
+
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		return spec.PostTripsJSON400Response(spec.Error{Message: "invalid json"})
+	}
+
+	if err := api.validator.Struct(body); err != nil {
+		return spec.PostTripsJSON400Response(spec.Error{Message: "invalid input: " + err.Error()})
+	}
+
+	return nil
 }
 
 // Get a trip details.

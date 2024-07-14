@@ -56,6 +56,7 @@ func run(ctx context.Context) error {
 	r := chi.NewMux()
 	r.Use(middleware.RequestID, middleware.Recoverer, httputils.ChiLogger(logger))
 	r.Mount("/", spec.Handler(&si))
+	
 
 	srv := &http.Server{
 		Addr:         ":8080",
